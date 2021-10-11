@@ -20,6 +20,8 @@ import {
   testRevealVcDocument
 } from "./__fixtures__";
 
+import testVcParentDocument from "./__fixtures__/data/test_vc_parent.json";
+
 import vc from "vc-js";
 import { Ed25519KeyPair } from "crypto-ld";
 import jsigs from "jsonld-signatures";
@@ -32,6 +34,8 @@ import {
 
 const key = new Bls12381G2KeyPair(exampleBls12381KeyPair);
 const ed25519Key = new Ed25519KeyPair(exampleEd25519KeyPair);
+
+const prettyPrint = (obj: any): string => JSON.stringify(obj, null, 2);
 
 /**
  * Tests integration with vc-js
@@ -95,10 +99,12 @@ describe("vc-js integration", () => {
 
     const verifiablePresentation = await vc.signPresentation({
       presentation,
-      suite: new jsigs.suites.Ed25519Signature2018({ key: ed25519Key }),
-      challenge: "123",
+      suite: new BbsBlsSignature2020({ key }),
+      purpose: new jsigs.purposes.AssertionProofPurpose(),
       documentLoader: customLoader
     });
+
+    console.log("verifiablePresentation", prettyPrint(verifiablePresentation));
 
     expect(verifiablePresentation.proof).toBeDefined();
   });
@@ -106,37 +112,54 @@ describe("vc-js integration", () => {
   it("should derive proof, create, sign and verify presentation", async () => {
     const holder = "did:example:b34ca6cd37bbf23";
     const id = "urn:uuid:1234";
-    const derivedProof = await deriveProof(
-      testSignedVcDocument,
-      testRevealVcDocument,
-      {
-        suite: new BbsBlsSignatureProof2020(),
-        documentLoader: customLoader
-      }
+
+    const verifiableCredential = await vc.issue({
+      credential: testVcDocument,
+      documentLoader: customLoader,
+      suite: new BbsBlsSignature2020({ key })
+    });
+
+    console.log("verifiableCredential", prettyPrint(verifiableCredential));
+
+    testVcParentDocument.evidence.verifiableCredential = verifiableCredential;
+
+    console.log("testVcParentDocument", prettyPrint(testVcParentDocument));
+
+    const verifiableParentCredential = await vc.issue({
+      credential: testVcParentDocument,
+      documentLoader: customLoader,
+      suite: new BbsBlsSignature2020({ key })
+    });
+
+    console.log(
+      "verifiableParentCredential",
+      prettyPrint(verifiableParentCredential)
     );
 
     const presentation = vc.createPresentation({
-      verifiableCredential: derivedProof,
+      verifiableCredential: verifiableParentCredential,
       holder,
       id
     });
 
     const verifiablePresentation = await vc.signPresentation({
       presentation,
-      suite: new jsigs.suites.Ed25519Signature2018({ key: ed25519Key }),
-      challenge: "123",
+      suite: new BbsBlsSignature2020({ key }),
+      purpose: new jsigs.purposes.AssertionProofPurpose(),
       documentLoader: customLoader
     });
 
+    console.log("verifiablePresentation", prettyPrint(verifiablePresentation));
+
     const result = await vc.verify({
       presentation: verifiablePresentation,
-      suite: [
-        new jsigs.suites.Ed25519Signature2018(),
-        new BbsBlsSignatureProof2020()
-      ],
+      suite: [new BbsBlsSignature2020(), new BbsBlsSignatureProof2020()],
       challenge: "123",
+      purpose: new jsigs.purposes.AssertionProofPurpose(),
       documentLoader: customLoader
     });
+
+    console.log("result", prettyPrint(result));
 
     expect(result.verified).toBe(true);
   });

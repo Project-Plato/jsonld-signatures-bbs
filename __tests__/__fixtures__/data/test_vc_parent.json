@@ -41,8 +41,28 @@
       "LinkedVc": "https://big-plato.com/vocab/LinkedVc"
     }
   ],
+  "id": "https://big-plato.com/vc/1",
   "type": "VerifiableCredential",
+  "issuer": "https://big-plato.com/issuer/1",
+  "issuanceDate": "2019-12-03T12:19:52Z",
+  "expirationDate": "2029-12-03T12:19:52Z",
   "credentialSubject": {
-    "type": "CustomVc"
+    "id": "https://big-plato.com/subject/1",
+    "type": "CustomVc",
+    "foo": "foo1",
+    "bar": ["bar1", "bar2"],
+    "baz": [
+      {
+        "qux": "qux1"
+      },
+      {
+        "qux": "qux2"
+      }
+    ]
+  },
+  "evidence": {
+    "id": "https://big-plato.com/issuer/1",
+    "type": "LinkedVc",
+    "verifiableCredential": {}
   }
 }
